@@ -17,3 +17,11 @@
 (defn wonderland-number []
   ;; calculate me
   (first (filter valid? candidates)))
+
+
+(defn valid-cube? [x]
+  (->> x str set (map #(Math/pow (Integer. (str %)) 3)) (apply +) int
+       (= x)))
+
+(defn wonderland-cube []
+  (filter valid-cube? (range 0 1000)))
