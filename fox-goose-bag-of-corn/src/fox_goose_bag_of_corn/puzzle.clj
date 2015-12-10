@@ -5,7 +5,6 @@
 (def start-pos [[:fox :goose :corn :you] [:boat] []])
 (def end-pos [[] [:boat] [:fox :goose :corn :you]])
 (def end-pos-test [[:fox :corn] [:boat] [:goose :you]])
-
 (def illegal-pos [[:fox :goose] [:boat] [:you :corn]])
 
 (defn together-without-you?
@@ -13,11 +12,12 @@
   [x m]
   (->> x (map set) set
        (filter #(and (every? % m) (nil? (:you %))))
-       (filter #(if (:boat %) (:you %) true))
+       ;; (filter #(if (:boat %) (or (:you %) (= (count %) 1)) true))
        seq))
 
 (defn authorized-state? [x]
-  (let [ms [#{:goose :corn} #{:fox :goose}]]
+  (let [ms [#{:goose :corn} #{:fox :goose} #{:boat :goose} #{:boat :fox}
+            #{:boat :corn}]]
     (->> (map (partial together-without-you? x) ms)
          (some identity)
          not)))
@@ -58,7 +58,7 @@
   (let [[you-pos-old you-vec] (find-you state)]
     (for [you-pos-next ([[1] [0 2] [1]] you-pos-old)
           item (transportable-items you-vec)
-          :let [[you-old you-new] (move-items you-vec (x you-pos-next) [:you item])]]
+          :let [[you-old you-new] (move-items you-vec (state you-pos-next) [:you item])]]
       (->> [[you-pos-next you-new] [you-pos-old you-old]]
            (apply update-vector state)
            clear-nil))))
@@ -66,24 +66,33 @@
 (defn update-position-to-visit [actual-position to-visit visited path]
   (->> actual-position
        find-neighbour
-       (filter #(and (authorized-state? %) (nil? (visited %))))
+       (filter #(and (authorized-state? %) (nil? (visited (map set %)))))
        vec
-       (map vector (repeat path))
+       (map #(assoc {:path path} :node %))
        (concat to-visit)
        vec))
 
+(defn node-equal [xs]
+  (->> xs (map #(map set %)) (apply =)))
+
 (defn river-path
+  ([] (river-path start-pos end-pos))
   ([begin end] (river-path begin end [begin] [] #{}))
   ([begin end path to-visit visited]
-   (if (not= begin end)
+   (if (not (node-equal [begin end]))
      (do
        (let [new-to-visit (update-position-to-visit begin to-visit visited path)
-             next-node (first new-to-visit)]
-         (recur next-node end (conj path next-node) (rest new-to-visit)
-                     (conj visited new-to-visit))))
+             next-node-maps (first new-to-visit)
+             next-node (:node next-node-maps)
+             next-path (:path next-node-maps)] ;; keep only position not path
+         (recur next-node end (conj next-path next-node) (rest new-to-visit)
+                (conj visited (map set next-node)))))
      path)))
+
+(def river-crossing-plan river-path)
 
 ;; new-path (conj path new-path)
 
 #_(apply f [actual-position path to-visit visited])
 #_(if (not= actual-position destination) () path)
+;; (river-path start-pos end-pos)
