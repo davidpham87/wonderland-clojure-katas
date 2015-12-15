@@ -14,6 +14,7 @@
        (map #(if % 1 0))
        (apply + (Math/abs (- (.length x) (.length y))))))
 
+
 (defn find-new-neighbours [word candidates path visited]
   (->> candidates
        (filter #(= 1 (n-diff-characters % word)))
